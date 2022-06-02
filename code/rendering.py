@@ -1,5 +1,4 @@
 
-import imp
 
 
 import torch
@@ -13,4 +12,4 @@ class Render():
         
     
     def get_pix_color(self, cam_pos, pix_raydir):
-        
+        pass
