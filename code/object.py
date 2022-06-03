@@ -12,7 +12,7 @@ class Material():
         self.__specular_reflectance = torch.tensor([[0.7752, 0.7752, 0.7752]]).cuda().float()
     
     def get_diffuse_albedo(self, x_reflect_):
-        x_reflect_[:,:] = torch.tensor([0.2,0.2,0.2]).cuda().float()
+        x_reflect_[:,:] = torch.tensor([0.1,0.1,0.1]).cuda().float()
         return x_reflect_
     
     def get_specular_reflectance(self):
