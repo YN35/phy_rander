@@ -27,7 +27,7 @@ class Shape():
         pass
     
     def get_normal(self, x_):
-        return x_ / torch.abs(x_)
+        return x_ / torch.norm(x_, dim=1).unsqueeze(1).expand(x_.shape)
     
     def get_sdf(self, x_):
-        return torch.abs(x_) - 1
+        return (torch.norm(x_, dim=1) - 1).unsqueeze(0)

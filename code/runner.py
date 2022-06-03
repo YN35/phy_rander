@@ -20,11 +20,13 @@ if __name__ == '__main__':
     rend = rendering.Render(cam_pos_,pix_raydir_,pix_width,pix_hight)
     
     image_masked = rend.get_pix_color()
-    image_2d = torch.empty(cam.get_pix_hight()*cam.get_pix_width(), 3).cuda().float()
-    image_2d[rend.get_surface_mask()] = image_masked
+    image_2d = torch.zeros(cam.get_pix_hight()*cam.get_pix_width(), 3).cuda().float()
+    image_2d[rend.get_surface_mask()[:,0],:] = image_masked['sg_rgb']
     image_3d = cam.conv_2d_to_3d(image_2d)
     
     cam.update_image(image_3d)
+    
+    cam.make_image()
     
     
     out = cam.get_image()

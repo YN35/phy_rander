@@ -10,9 +10,10 @@ import env_map
 
 class Render():
     
-    def __init__(self,cam_pos_,pix_raydir_,pix_width,pix_hight,max_distance=100,allowable_error=0.005,blending_weights=None) -> None:
+    def __init__(self,cam_pos_,pix_raydir_,pix_width,pix_hight,max_distance=100,allowable_error=0.005,blending_weights=None, diffuse_rgb=None) -> None:
         self.TINY_NUMBER = 1e-6
         self.blending_weights = blending_weights
+        self.diffuse_rgb = diffuse_rgb
         
         self.__cam_pos_ = cam_pos_
         self.__pix_raydir_ = pix_raydir_
@@ -31,8 +32,9 @@ class Render():
     def get_pix_color(self):
         envSGs_ = self.envmp.get_envSGs()
         normal_ = self.shape.get_normal(self.__x_reflect_)
-        pix_raydir_ = self.__pix_raydir_
+        pix_raydir_ = self.__pix_raydir_[self.__surface_mask[:,0],:]
         roughness = self.mate.get_roughness()
+        specular_reflectance = self.mate.get_specular_reflectance()
         diffuse_albedo = self.mate.get_diffuse_albedo(self.__x_reflect_)
         
         M = envSGs_.shape[0]
@@ -40,8 +42,8 @@ class Render():
         assert (K == roughness.shape[0])
         dots_shape = list(normal_.shape[:-1])
         
-        normal_ = self.shape.get_normal().unsqueeze(-2).unsqueeze(-2).expand(dots_shape + [M, K, 3])
-        pix_raydir_ = self.__pix_raydir_.unsqueeze(-2).unsqueeze(-2).expand(dots_shape + [M, K, 3])
+        normal_ = normal_.unsqueeze(-2).unsqueeze(-2).expand(dots_shape + [M, K, 3])
+        pix_raydir_ = pix_raydir_.unsqueeze(-2).unsqueeze(-2).expand(dots_shape + [M, K, 3])
         
         envSGs_ = self.prepend_dims(envSGs_, dots_shape)
         envSGs_ = envSGs_.unsqueeze(-2).expand(dots_shape + [M, K, 7])
@@ -80,7 +82,7 @@ class Render():
         dot2 = torch.clamp(dot2, min=0.)
         k = (roughness + 1.) * (roughness + 1.) / 8.
         G1 = dot1 / (dot1 * (1 - k) + k + self.TINY_NUMBER)  # k<1 implies roughness < 1.828
-        G2 = dot2 / (dot2 * (1 - k) + k + self.INY_NUMBER)
+        G2 = dot2 / (dot2 * (1 - k) + k + self.TINY_NUMBER)
         G = G1 * G2
 
         Moi = F * G / (4 * dot1 * dot2 + self.TINY_NUMBER)
@@ -117,7 +119,7 @@ class Render():
         ########################################
         # per-point hemisphere integral of envmap
         ########################################
-        if diffuse_rgb is None:
+        if self.diffuse_rgb is None:
             diffuse = (diffuse_albedo / np.pi).unsqueeze(-2).unsqueeze(-2).expand(dots_shape + [M, 1, 3])
 
             # multiply with light sg
@@ -131,16 +133,16 @@ class Render():
 
             dot1 = torch.sum(lobe_prime * normal_, dim=-1, keepdim=True)
             dot2 = torch.sum(final_lobes * normal_, dim=-1, keepdim=True)
-            diffuse_rgb = mu_prime * self.hemisphere_int(lambda_prime, dot1) - \
+            self.diffuse_rgb = mu_prime * self.hemisphere_int(lambda_prime, dot1) - \
                         final_mus * alpha_cos * self.hemisphere_int(final_lambdas, dot2)
-            diffuse_rgb = diffuse_rgb.sum(dim=-2).sum(dim=-2)
-            diffuse_rgb = torch.clamp(diffuse_rgb, min=0.)
+            self.diffuse_rgb = self.diffuse_rgb.sum(dim=-2).sum(dim=-2)
+            self.diffuse_rgb = torch.clamp(self.diffuse_rgb, min=0.)
 
         # combine diffue and specular rgb, then return
-        rgb = specular_rgb + diffuse_rgb
+        rgb = specular_rgb + self.diffuse_rgb
         ret = {'sg_rgb': rgb,
             'sg_specular_rgb': specular_rgb,
-            'sg_diffuse_rgb': diffuse_rgb,
+            'sg_diffuse_rgb': self.diffuse_rgb,
             'sg_diffuse_albedo': diffuse_albedo}
 
         return ret
@@ -159,17 +161,17 @@ class Render():
         
         ray_edge_pos_ = torch.empty(self.__pix_hight*self.__pix_width, 3).cuda().float()
         ray_edge_pos_[:,:] = self.__cam_pos_
-        sdf_ = self.shape.get_sdf(ray_edge_pos_)
+        sdf_ = self.shape.get_sdf(ray_edge_pos_)#sdf_.shape[0]
         while torch.sum(sdf_ >= max_distance) + torch.sum(sdf_ <= allowable_error) != torch.numel(sdf_) :
-            ray_edge_pos_ = ray_edge_pos_ + (self.__pix_raydir_ * sdf_)
+            ray_edge_pos_ = ray_edge_pos_ + (self.__pix_raydir_ * torch.t(sdf_))
             sdf_ = self.shape.get_sdf(ray_edge_pos_)
             
-        surface_mask = sdf_ >= max_distance
-        x_reflect_ = ray_edge_pos_[surface_mask]
+        surface_mask = torch.t(sdf_ <= max_distance)
+        x_reflect_ = ray_edge_pos_[surface_mask[:,0],:]
             
         return x_reflect_, surface_mask
     
-    def prepend_dims(tensor, shape):
+    def prepend_dims(self, tensor, shape):
         '''
         :param tensor: tensor of shape [a1, a2, ..., an]
         :param shape: shape to prepend, e.g., [b1, b2, ..., bm]

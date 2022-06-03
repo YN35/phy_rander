@@ -4,7 +4,7 @@ import torch
 class Env_map():
     
     def __init__(self) -> None:
-        self.__SGLobes = torch.tensor([[-1,-1,-1]]).cuda().float()
+        self.__SGLobes = torch.tensor([[0,-1,-1]]).cuda().float()
         self.__SGLambdas = torch.tensor([[0.9]]).cuda().float()
         self.__SGMus = torch.tensor([[1,1,1]]).cuda().float()
         

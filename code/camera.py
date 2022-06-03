@@ -1,7 +1,9 @@
 import math
 
+from PIL import Image
 import numpy as np
 import torch
+import torchvision
 
 class Camera():
     
@@ -60,11 +62,14 @@ class Camera():
         
         return _pix_raydir
     
+    def make_image(self):
+        torchvision.transforms.functional.to_pil_image(self.__image).save("out_image.bmp")
+    
     def conv_3d_to_2d(self, tensor):
         return tensor.permute(1, 2, 0).view(self.__pix_width * self.__pix_hight, 3)
         
     def conv_2d_to_3d(self, tensor):
-        return tensor.permute(1, 0).view(3, self.__pix_width * self.__pix_hight)
+        return tensor.permute(1, 0).view(3, self.__pix_hight , self.__pix_width)
         
     def get_image(self):
         return self.__image
