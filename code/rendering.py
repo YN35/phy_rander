@@ -10,13 +10,14 @@ import env_map
 
 class Render():
     
-    def __init__(self,cam_pos_,pix_raydir_,pix_width,pix_hight,max_distance=100,allowable_error=0.005,blending_weights=None, diffuse_rgb=None) -> None:
+    def __init__(self,cam_pos_,pix_raydir_,pix_width,pix_hight,max_distance=50,allowable_error=0.01,blending_weights=None, diffuse_rgb=None) -> None:
         self.TINY_NUMBER = 1e-6
         self.blending_weights = blending_weights
         self.diffuse_rgb = diffuse_rgb
         
         self.__cam_pos_ = cam_pos_
         self.__pix_raydir_ = pix_raydir_
+        self.__pix_raydir_[self.__pix_raydir_ == 0] = self.TINY_NUMBER
         self.__pix_hight = pix_hight
         self.__pix_width = pix_width
         # self.__omega_0_ = self.__cam_pos_ - self.__x_reflect_

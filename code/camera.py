@@ -18,7 +18,7 @@ class Camera():
         self.__pix_width = pix_width
         self.__pix_hight = pix_hight
         
-        self.__image = torch.empty(3, self.__pix_hight, self.__pix_width)
+        self.__image = torch.empty(3, self.__pix_hight, self.__pix_width).cuda().float()
         
         
     def get_pix_raydir(self):
@@ -62,8 +62,26 @@ class Camera():
         
         return _pix_raydir
     
-    def make_image(self):
+    def save_image(self):
+        # np_image = self.filter(self.__image.permute(1, 2, 0).to('cpu').detach().numpy())
+        # Image.fromarray(np_image.astype(np.uint8)).save("out_image.bmp")
+        # self.__image = self.__image * (1 / torch.max(self.__image))
+        # self.__image = 1 / (1 + math.e ** -((3 / torch.max(self.__image)) * (self.__image - torch.max(self.__image))))
+        self.__image = 1 - math.e ** -((2 / torch.max(self.__image)) * self.__image)
         torchvision.transforms.functional.to_pil_image(self.__image).save("out_image.bmp")
+        
+    def filter(self,image):
+        
+        q90, q10 = np.percentile(image, [99 ,1])
+        iqr = q90 - q10
+        image = np.where(image == 0., q10 - (iqr/4), image)
+        image = np.where(image > q90 + (iqr/4), q90 + (iqr/4), image)
+        image = np.where(image < q10 - (iqr/4), q10 - (iqr/4), image)
+        image[0,0,:] = q90 + (iqr/4)
+        image = image - np.min(image)
+        image = image * (255 / np.max(image))
+        
+        return image
     
     def conv_3d_to_2d(self, tensor):
         return tensor.permute(1, 2, 0).view(self.__pix_width * self.__pix_hight, 3)
