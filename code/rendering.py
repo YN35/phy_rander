@@ -8,21 +8,24 @@ import camera
 import object
 import env_map
 
-class Render(camera.Camera):
+class Render():
     
-    def __init__(self,cam_pos_,pix_raydir_,max_distance=100,allowable_error=0.005,blending_weights=None) -> None:
+    def __init__(self,cam_pos_,pix_raydir_,pix_width,pix_hight,max_distance=100,allowable_error=0.005,blending_weights=None) -> None:
         self.TINY_NUMBER = 1e-6
         self.blending_weights = blending_weights
         
         self.__cam_pos_ = cam_pos_
         self.__pix_raydir_ = pix_raydir_
-        self.__x_reflect_, self.__surface_mask = self.ray_marching(max_distance,allowable_error)
-        self.__omega_0_ = self.__cam_pos_ - self.__x_reflect_
-        self.__omega_0_ = self.__omega_0_ / torch.norm(self.__omega_0_, dim=0)
-        
+        self.__pix_hight = pix_hight
+        self.__pix_width = pix_width
+        # self.__omega_0_ = self.__cam_pos_ - self.__x_reflect_
+        # self.__omega_0_ = self.__omega_0_ / torch.norm(self.__omega_0_, dim=0)
+
         self.shape = object.Shape()
         self.mate = object.Material()
         self.envmp = env_map.Env_map()
+        
+        self.__x_reflect_, self.__surface_mask = self.ray_marching(max_distance,allowable_error)
         
     
     def get_pix_color(self):
@@ -154,7 +157,7 @@ class Render(camera.Camera):
             Tensor(2d): それぞれのピクセルにオブジェクトの像が存在するか
         """
         
-        ray_edge_pos_ = torch.empty(self.__pix_hight*self.__pix_width, 3)
+        ray_edge_pos_ = torch.empty(self.__pix_hight*self.__pix_width, 3).cuda().float()
         ray_edge_pos_[:,:] = self.__cam_pos_
         sdf_ = self.shape.get_sdf(ray_edge_pos_)
         while torch.sum(sdf_ >= max_distance) + torch.sum(sdf_ <= allowable_error) != torch.numel(sdf_) :

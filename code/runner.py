@@ -8,13 +8,16 @@ import camera
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     
-    cam = camera.Camera([5,0,0], [-1,0,0], [0,0,1], 300, 150, 90)
+    pix_hight = 150
+    pix_width = 300
+    
+    cam = camera.Camera([5,0,0], [-1,0,0], [0,0,1], pix_width, pix_hight, 90)
         
     cam_pos_ = cam.get_cam_pos()
     pix_raydir_ = cam.get_pix_raydir()
     # print(pix_raydir_[:,-1,-1])
     # print(pix_raydir_[:,0,0])
-    rend = rendering.Render(cam_pos_,pix_raydir_)
+    rend = rendering.Render(cam_pos_,pix_raydir_,pix_width,pix_hight)
     
     image_masked = rend.get_pix_color()
     image_2d = torch.empty(cam.get_pix_hight()*cam.get_pix_width(), 3).cuda().float()
