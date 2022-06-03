@@ -20,6 +20,11 @@ class Camera():
         
         
     def get_pix_raydir(self):
+        """_summary_
+
+        Returns:
+            tensor(2d): _description_
+        """
         
         w = math.tan(math.radians(self.__fov/2))
         h = w * (self.__pix_hight / self.__pix_width)
@@ -51,7 +56,15 @@ class Camera():
         #正規化
         _pix_raydir = _pix_raydir / torch.norm(_pix_raydir, dim=0)
         
+        _pix_raydir = self.conv_3d_to_2d(_pix_raydir)
+        
         return _pix_raydir
+    
+    def conv_3d_to_2d(self, tensor):
+        return tensor.permute(1, 2, 0).view(self.__pix_width * self.__pix_hight, 3)
+        
+    def conv_2d_to_3d(self, tensor):
+        return tensor.permute(1, 0).view(3, self.__pix_width * self.__pix_hight)
         
     def get_image(self):
         return self.__image
@@ -61,4 +74,10 @@ class Camera():
         
     def get_cam_pos(self):
         return self.__cam_pos_
+    
+    def get_pix_width(self):
+        return self.__pix_width
+    
+    def get_pix_hight(self):
+        return self.__pix_hight
     
